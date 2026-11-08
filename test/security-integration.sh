@@ -46,7 +46,7 @@ csrf=${csrf_cookie#*=}
 [ "$(status -H "Cookie: $auth_cookies" http://127.0.0.1:8800/admin/api/stats)" = 200 ]
 [ "$(status -H "Cookie: $auth_cookies" -X PATCH http://127.0.0.1:8800/admin/api/links/1 -H 'content-type: application/json' --data '{"disabled":true}')" = 403 ]
 
-slug="secure-$(date +%s)"
+slug="secure$(date +%s)"
 payload="{\"url\":\"https://example.com/security\",\"slug\":\"$slug\"}"
 code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Cookie: $auth_cookies" -X POST http://127.0.0.1:8800/api/links -H 'content-type: application/json' -H "X-CSRF-Token: $csrf" --data "$payload")
 [ "$code" = 201 ]
