@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "msq-short-migration-test",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "msq-short-migration-test",
+    "database_id": "00000000-0000-0000-0000-000000000003",
+    "migrations_dir": "migrations"
+  }]
+}
