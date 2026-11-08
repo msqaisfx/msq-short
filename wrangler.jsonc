@@ -52,6 +52,39 @@
         "TURNSTILE_REQUIRED": "true",
         "REDIRECT_RATE_LIMIT_REQUIRED": "true"
       }
+    },
+    "production": {
+      "name": "msq-short-production",
+      "workers_dev": false,
+      "preview_urls": false,
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "REPLACE_WITH_YOUR_PRODUCTION_D1_DATABASE_NAME",
+        "database_id": "REPLACE_WITH_YOUR_PRODUCTION_D1_DATABASE_ID",
+        "migrations_dir": "migrations"
+      }],
+      "secrets": {
+        "required": [
+          "PRODUCTION_ADMIN_CREDENTIALS",
+          "PRODUCTION_LOGIN_RATE_LIMIT_SECRET",
+          "REDIRECT_RATE_LIMIT_SECRET",
+          "TURNSTILE_SECRET_KEY"
+        ]
+      },
+      "ratelimits": [{
+        "name": "REDIRECT_RATE_LIMITER",
+        "namespace_id": "11002",
+        "simple": { "limit": 60, "period": 60 }
+      }],
+      "vars": {
+        "APP_BASE_URL": "https://go.msqaisfxlimited.com",
+        "APP_ENV": "production",
+        "STAGING_AUTH_REQUIRED": "false",
+        "PRODUCTION_ADMIN_AUTH_REQUIRED": "true",
+        "TURNSTILE_SITE_KEY": "REPLACE_WITH_YOUR_PRODUCTION_TURNSTILE_SITE_KEY",
+        "TURNSTILE_REQUIRED": "true",
+        "REDIRECT_RATE_LIMIT_REQUIRED": "true"
+      }
     }
   }
 }

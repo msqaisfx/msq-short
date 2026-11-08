@@ -10,10 +10,11 @@
     "check": "node --check src/worker.js && node --check src/auth.js && node --test",
     "test:integration": "sh test/integration.sh",
     "test:security": "sh test/security-integration.sh",
+    "test:production-security": "sh test/production-security-integration.sh",
     "test:rate-limit": "sh test/redirect-rate-limit-integration.sh",
     "test:migration": "sh test/migration-v1.1.0.sh",
     "test:d1-migration": "sh test/d1-migration-v1.1.0.sh",
-    "verify": "npm run check && npm run test:integration && npm run test:security && npm run test:rate-limit && npm run test:migration && npm run test:d1-migration && npx wrangler deploy --dry-run"
+    "verify": "npm run check && npm run test:integration && npm run test:security && npm run test:production-security && npm run test:rate-limit && npm run test:migration && npm run test:d1-migration && npx wrangler deploy --dry-run"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.4"

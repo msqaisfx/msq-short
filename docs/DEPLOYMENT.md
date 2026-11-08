@@ -12,3 +12,11 @@ These instructions create resources in your own Cloudflare account. They do not 
 8. Follow `docs/UPGRADING-v1.1.0.md` for migration order, then run `npm run verify`, inspect `npx wrangler deploy --dry-run --env staging`, and deploy only after explicit approval.
 
 Use Cloudflare's published Turnstile test keys only for local automated tests. Production and staging secrets must be distinct. A missing security secret must fail closed. Before public production deployment, separately review custom domains, observability, retention, abuse controls, and account limits.
+
+## Production admin authentication
+
+Production deployment requires `APP_ENV=production`, `STAGING_AUTH_REQUIRED=false`, and `PRODUCTION_ADMIN_AUTH_REQUIRED=true`. Provision `PRODUCTION_ADMIN_CREDENTIALS` and `PRODUCTION_LOGIN_RATE_LIMIT_SECRET` as new Cloudflare Secrets; never copy the Staging values. Only `admin` verifier records are accepted in production.
+
+`scripts/build-production-admin-secrets.js` accepts a NUL-delimited administrator username and password on standard input and emits only PBKDF2 verifier material plus a random login-rate secret. Pipe its output directly to an approved hidden-input provisioning flow; do not save it, echo it to logs, or pass a plaintext password as a command-line argument.
+
+The public home page, link creation, QR, and redirects remain anonymous. The Worker protects `/admin`, all nested admin assets, and every `/admin/api/*` route with its own session and CSRF validation. Do not configure a client-supplied header as an authentication substitute. Missing production admin configuration intentionally returns `503` for admin routes while leaving public routes available.
