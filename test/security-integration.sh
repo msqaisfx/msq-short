@@ -21,6 +21,8 @@ status(){ curl -sS -o /dev/null -w '%{http_code}' "$@"; }
 [ "${MSQ_TEST_DEBUG:-false}" != true ] || curl -sS -i http://127.0.0.1:8800/
 [ "$(status http://127.0.0.1:8800/)" = 303 ]
 [ "$(status http://127.0.0.1:8800/styles.css)" = 303 ]
+[ "$(status http://127.0.0.1:8800/brand/msqaisfx-logo.png)" = 200 ]
+curl -sS -D - -o /dev/null http://127.0.0.1:8800/brand/msqaisfx-logo.png | grep -qi '^content-type: image/png'
 [ "$(status http://127.0.0.1:8800/health)" = 303 ]
 [ "$(status http://127.0.0.1:8800/unknown-short)" = 303 ]
 [ "$(status http://127.0.0.1:8800/admin/api/stats)" = 401 ]
