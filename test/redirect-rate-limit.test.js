@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pseudonymousClientKey } from '../src/core.js';
-import { enforceRedirectRateLimit } from '../src/worker.js';
+import { enforceRedirectRateLimit, handle } from '../src/worker.js';
 
 const request = ip => new Request('https://short.example/aB9Z', { headers: { 'CF-Connecting-IP': ip } });
 
@@ -47,4 +47,20 @@ test('repeated and sequential redirect probes stop at the binding decision', asy
   assert.equal(decisions.filter(value => value.allowed).length, 60);
   assert.equal(decisions.filter(value => !value.allowed).length, 5);
   assert.equal(keys.size, 1);
+});
+
+test('a rejected redirect never reaches D1, including a normalized alternate path', async () => {
+  let d1Queries = 0;
+  const env = {
+    REDIRECT_RATE_LIMIT_REQUIRED: 'true',
+    REDIRECT_RATE_LIMIT_SECRET: 'local-test-rate-limit-secret',
+    REDIRECT_RATE_LIMITER: { async limit() { return { success: false }; } },
+    DB: { prepare() { d1Queries += 1; throw new Error('D1 must not be queried'); } }
+  };
+  const ctx = { waitUntil() {} };
+  for (const path of ['/aB9Z', '/admin/../aB9Z']) {
+    const response = await handle(new Request(`https://short.example${path}`), env, ctx);
+    assert.equal(response.status, 429);
+  }
+  assert.equal(d1Queries, 0);
 });

@@ -176,7 +176,7 @@ async function adminApi(request, env, path, session) {
   return error('NOT_FOUND', 404);
 }
 
-async function handle(request, env, ctx) {
+export async function handle(request, env, ctx) {
   env.ctx = ctx;
   const url = new URL(request.url);
   let session = null;
