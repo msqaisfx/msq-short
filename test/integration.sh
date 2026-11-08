@@ -23,6 +23,10 @@ slug=$(printf '%s' "$create" | sed -n 's/.*"slug":"\([a-zA-Z0-9]*\)".*/\1/p')
 curl -fsS -o /dev/null -D work/redirect.headers "http://127.0.0.1:8799/$slug"
 grep -i '^location: https://example.com/a?x=1' work/redirect.headers >/dev/null
 curl -fsS "http://127.0.0.1:8799/api/qr?value=http%3A%2F%2Flocalhost%2F$slug" | grep '<svg' >/dev/null
+curl -fsS -D work/qr-png.headers -o work/MSQ-Short-QR.png "http://127.0.0.1:8799/api/qr?format=png&value=http%3A%2F%2Flocalhost%2F$slug"
+grep -qi '^content-type: image/png' work/qr-png.headers
+grep -qi 'filename="MSQ-Short-QR.png"' work/qr-png.headers
+test "$(od -An -tx1 -N8 work/MSQ-Short-QR.png | tr -d ' \n')" = '89504e470d0a1a0a'
 unauthorized=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8799/admin/api/stats)
 [ "$unauthorized" = "401" ]
 [ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8799/admin/api/stats -H 'Cf-Access-Authenticated-User-Email: forged@example.com')" = "401" ]
