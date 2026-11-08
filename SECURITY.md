@@ -11,7 +11,9 @@ Report suspected vulnerabilities privately to the project owner or repository se
 ## Deployment requirements
 
 - Keep all credentials in Cloudflare Secrets or an ignored local `.dev.vars` file.
-- Enable `STAGING_AUTH_REQUIRED=true` only for private staging; production is intentionally public.
+- Enable `STAGING_AUTH_REQUIRED=true` only for private staging. Production is public except for application-protected admin routes.
+- Set `PRODUCTION_ADMIN_AUTH_REQUIRED=true` and provision separate `PRODUCTION_ADMIN_CREDENTIALS` and `PRODUCTION_LOGIN_RATE_LIMIT_SECRET`; production accepts only `admin` roles and fails closed when configuration is missing.
+- Never trust `Cf-Access-Authenticated-User-Email` or another client-supplied header as production authentication without cryptographic verification. MSQ Short ignores it.
 - Enable `TURNSTILE_REQUIRED=true` outside local development and verify tokens on the server.
 - Keep D1 bindings, Turnstile widgets, hostnames, and secrets environment-specific.
 - Preserve `run_worker_first=true` so application security executes before protected assets.

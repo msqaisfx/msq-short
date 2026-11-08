@@ -25,7 +25,7 @@ grep -i '^location: https://example.com/a?x=1' work/redirect.headers >/dev/null
 curl -fsS "http://127.0.0.1:8799/api/qr?value=http%3A%2F%2Flocalhost%2F$slug" | grep '<svg' >/dev/null
 unauthorized=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8799/admin/api/stats)
 [ "$unauthorized" = "401" ]
-curl -fsS http://127.0.0.1:8799/admin/api/stats -H 'Cf-Access-Authenticated-User-Email: admin@example.com' | grep '"ok":true' >/dev/null
+[ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8799/admin/api/stats -H 'Cf-Access-Authenticated-User-Email: forged@example.com')" = "401" ]
 curl -fsS http://127.0.0.1:8799/ | grep 'MSQ Short' >/dev/null
 
 # Legacy path syntax remains routable.

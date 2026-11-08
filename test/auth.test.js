@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { constantTimeEqual, isAuthRequired, isSafeReturnPath, issueLoginCsrf, parseCookies, secureCookie, sha256, verifyLoginCsrf, verifyPassword } from '../src/auth.js';
-import { verifyTurnstile } from '../src/worker.js';
+import { constantTimeEqual, credentialSecret, isAuthRequired, isProductionAdminAuthRequired, isSafeReturnPath, issueLoginCsrf, loginRateLimitSecret, parseCookies, productionAdminAuthConfigured, secureCookie, sha256, verifyLoginCsrf, verifyPassword } from '../src/auth.js';
+import { handle, verifyTurnstile } from '../src/worker.js';
 
 test('cookie parser and secure session attributes', () => {
   assert.deepEqual(parseCookies('a=1; session=abc'), { a: '1', session: 'abc' });
@@ -13,6 +13,30 @@ test('staging authentication is opt-in and never applied to production', () => {
   assert.equal(isAuthRequired({ STAGING_AUTH_REQUIRED: 'true', APP_ENV: 'staging' }), true);
   assert.equal(isAuthRequired({ STAGING_AUTH_REQUIRED: 'true', APP_ENV: 'production' }), false);
   assert.equal(isAuthRequired({ STAGING_AUTH_REQUIRED: 'false', APP_ENV: 'staging' }), false);
+});
+
+test('production admin authentication is mandatory and uses separate secrets', () => {
+  const env = {
+    APP_ENV: 'production', PRODUCTION_ADMIN_AUTH_REQUIRED: 'true',
+    PRODUCTION_ADMIN_CREDENTIALS: '[production]', PRODUCTION_LOGIN_RATE_LIMIT_SECRET: 'production-rate',
+    STAGING_AUTH_CREDENTIALS: '[staging]', LOGIN_RATE_LIMIT_SECRET: 'staging-rate'
+  };
+  assert.equal(isProductionAdminAuthRequired(env), true);
+  assert.equal(productionAdminAuthConfigured(env), true);
+  assert.equal(credentialSecret(env), '[production]');
+  assert.equal(loginRateLimitSecret(env), 'production-rate');
+  assert.equal(productionAdminAuthConfigured({ APP_ENV: 'production' }), false);
+});
+
+test('production public routes remain public while admin fails closed if unconfigured', async () => {
+  const env = {
+    APP_ENV: 'production',
+    ASSETS: { fetch: async () => new Response('public', { status: 200 }) }
+  };
+  const ctx = { waitUntil() {} };
+  assert.equal((await handle(new Request('https://go.example/'), env, ctx)).status, 200);
+  assert.equal((await handle(new Request('https://go.example/admin/'), env, ctx)).status, 503);
+  assert.equal((await handle(new Request('https://go.example/admin/api/stats', { headers: { 'Cf-Access-Authenticated-User-Email': 'forged@example.com' } }), env, ctx)).status, 503);
 });
 
 test('return paths cannot become external redirects', () => {

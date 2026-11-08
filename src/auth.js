@@ -96,6 +96,24 @@ export function isAuthRequired(env) {
   return env.STAGING_AUTH_REQUIRED === 'true' && env.APP_ENV !== 'production';
 }
 
+export function isProductionAdminAuthRequired(env) {
+  return env.APP_ENV === 'production';
+}
+
+export function productionAdminAuthConfigured(env) {
+  return env.PRODUCTION_ADMIN_AUTH_REQUIRED === 'true'
+    && Boolean(env.PRODUCTION_ADMIN_CREDENTIALS)
+    && Boolean(env.PRODUCTION_LOGIN_RATE_LIMIT_SECRET);
+}
+
+export function credentialSecret(env) {
+  return isProductionAdminAuthRequired(env) ? env.PRODUCTION_ADMIN_CREDENTIALS : env.STAGING_AUTH_CREDENTIALS;
+}
+
+export function loginRateLimitSecret(env) {
+  return isProductionAdminAuthRequired(env) ? env.PRODUCTION_LOGIN_RATE_LIMIT_SECRET : env.LOGIN_RATE_LIMIT_SECRET;
+}
+
 export function isSafeReturnPath(value) {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\');
 }
@@ -116,9 +134,10 @@ export async function requireCsrf(request, session) {
 }
 
 export async function rateLimitLogin(request, env) {
-  if (!env.LOGIN_RATE_LIMIT_SECRET) throw new Error('INVALID_AUTH_CONFIGURATION');
+  const secret = loginRateLimitSecret(env);
+  if (!secret) throw new Error('INVALID_AUTH_CONFIGURATION');
   const address = request.headers.get('CF-Connecting-IP') || 'local';
-  const key = await hmac(address, env.LOGIN_RATE_LIMIT_SECRET);
+  const key = await hmac(address, secret);
   const windowSeconds = 900;
   const limit = 5;
   const row = await env.DB.prepare("INSERT INTO auth_login_attempts (client_key,attempt_count,window_started_at) VALUES (?,1,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(client_key) DO UPDATE SET attempt_count=CASE WHEN window_started_at <= datetime('now','-15 minutes') THEN 1 ELSE attempt_count+1 END, window_started_at=CASE WHEN window_started_at <= datetime('now','-15 minutes') THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE window_started_at END RETURNING attempt_count").bind(key).first();

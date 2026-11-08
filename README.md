@@ -51,10 +51,13 @@ Copy `.env.example` only as a reference. For local secrets, use an ignored `.dev
 | `STAGING_AUTH_REQUIRED` | No | Enables the staging-only gate |
 | `STAGING_AUTH_CREDENTIALS` | Yes | JSON PBKDF2 verifier records; no plaintext passwords |
 | `LOGIN_RATE_LIMIT_SECRET` | Yes | Pseudonymizes login client addresses |
+| `PRODUCTION_ADMIN_AUTH_REQUIRED` | No | Must be `true` in production; protects admin routes only |
+| `PRODUCTION_ADMIN_CREDENTIALS` | Yes | Production-only PBKDF2 admin verifier records |
+| `PRODUCTION_LOGIN_RATE_LIMIT_SECRET` | Yes | Production-only login-rate HMAC secret |
 | `REDIRECT_RATE_LIMIT_REQUIRED` | No | Fails closed unless redirect rate limiting is available |
 | `REDIRECT_RATE_LIMIT_SECRET` | Yes | HMAC-pseudonymizes redirect clients; use a distinct random secret |
 
-The credential JSON is a limited array of records containing `username`, `role`, `salt`, `iterations`, and `hash`. Generate records offline using an approved password-management process. Never reuse production passwords.
+The credential JSON is a limited array of records containing `username`, `role`, `salt`, `iterations`, and `hash`. Generate records offline using an approved password-management process. Production accepts only the `admin` role. Never reuse staging credentials or rate-limit secrets in production.
 
 ## Cloudflare setup
 
@@ -62,7 +65,7 @@ Create your own D1 database, update a private deployment configuration with its 
 
 ## Security
 
-The Worker validates HTTP(S) targets, rejects credential-bearing and local-loopback URLs, verifies Turnstile on the server, applies security headers, and minimizes analytics data. Compact codes are public identifiers, not secrets. The redirect limiter is approximate and local to each Cloudflare location; it protects D1 before lookup but is not a globally strict quota. Staging authentication is independent of the final public product. See [SECURITY.md](SECURITY.md) for reporting and supported-version information.
+The Worker validates HTTP(S) targets, rejects credential-bearing and local-loopback URLs, verifies Turnstile on the server, applies security headers, and minimizes analytics data. Compact codes are public identifiers, not secrets. The redirect limiter is approximate and local to each Cloudflare location; it protects D1 before lookup but is not a globally strict quota. Staging may protect the entire environment. Production keeps the public shortener anonymous while requiring application sessions for `/admin`, `/admin/*`, and every Admin API; client-supplied Access headers are ignored. See [SECURITY.md](SECURITY.md) for reporting and supported-version information.
 
 ## Upgrading to v1.1.0
 
