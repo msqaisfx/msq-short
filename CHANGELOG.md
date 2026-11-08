@@ -2,6 +2,14 @@
 
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Replaced the previously inferred MSQAISFX logo asset with the owner-supplied official reference.
+- Added an automated official-logo fingerprint and surface-wiring regression test.
+- Made the administration table horizontally scrollable on narrow screens.
+
 ## [1.0.0] - 2026-11-08
 
 ### Added
