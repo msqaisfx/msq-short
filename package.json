@@ -1,6 +1,6 @@
 {
   "name": "msq-short",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "description": "Open-source bilingual URL shortener for Cloudflare Workers and D1",
   "license": "MIT",
@@ -10,7 +10,9 @@
     "check": "node --check src/worker.js && node --check src/auth.js && node --test",
     "test:integration": "sh test/integration.sh",
     "test:security": "sh test/security-integration.sh",
-    "verify": "npm run check && npm run test:integration && npm run test:security && npx wrangler deploy --dry-run"
+    "test:rate-limit": "sh test/redirect-rate-limit-integration.sh",
+    "test:migration": "sh test/migration-v1.1.0.sh",
+    "verify": "npm run check && npm run test:integration && npm run test:security && npm run test:rate-limit && npm run test:migration && npx wrangler deploy --dry-run"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.4"

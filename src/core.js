@@ -1,11 +1,28 @@
-const RESERVED = new Set(['api', 'admin', 'health', 'r', 'assets']);
+export const BASE62 = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const RESERVED = new Set([
+  'api', 'admin', 'auth', 'brand', 'health', 'r', 'assets',
+  'login', 'logout', 'robots', 'static', 'support'
+]);
+const BLOCKED = new Set([
+  'abuse', 'fuck', 'fucker', 'nazi', 'porn', 'scam', 'sex', 'spam', 'terror'
+]);
+
+function assertAllowed(slug) {
+  const folded = slug.toLowerCase();
+  if (RESERVED.has(folded) || BLOCKED.has(folded)) throw new Error('INVALID_SLUG');
+  return slug;
+}
 
 export function normalizeSlug(value) {
-  const slug = String(value || '').trim().toLowerCase();
-  if (!/^[a-z0-9_-]{3,48}$/.test(slug) || RESERVED.has(slug)) {
-    throw new Error('INVALID_SLUG');
-  }
-  return slug;
+  const slug = String(value || '').trim();
+  if (!/^[a-zA-Z0-9_-]{3,48}$/.test(slug)) throw new Error('INVALID_SLUG');
+  return assertAllowed(slug);
+}
+
+export function normalizeCustomSlug(value) {
+  const slug = String(value || '').trim();
+  if (!/^[a-zA-Z0-9]{3,48}$/.test(slug)) throw new Error('INVALID_SLUG');
+  return assertAllowed(slug);
 }
 
 export function validateTarget(value) {
@@ -16,15 +33,45 @@ export function validateTarget(value) {
   return url.toString();
 }
 
-export function randomSlug(bytes = 6, random = crypto.getRandomValues.bind(crypto)) {
-  const alphabet = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ';
-  const data = new Uint8Array(bytes);
-  random(data);
-  return [...data].map(v => alphabet[v % alphabet.length]).join('');
+export function randomSlug(length = 4, random = crypto.getRandomValues.bind(crypto)) {
+  if (!Number.isInteger(length) || length < 3 || length > 48) throw new Error('INVALID_SLUG_LENGTH');
+  let slug = '';
+  while (slug.length < length) {
+    const data = new Uint8Array(Math.max(8, (length - slug.length) * 2));
+    random(data);
+    for (const value of data) {
+      // Rejection sampling avoids modulo bias: 248 is the largest multiple of 62 below 256.
+      if (value >= 248) continue;
+      slug += BASE62[value % BASE62.length];
+      if (slug.length === length) break;
+    }
+  }
+  return slug;
+}
+
+export async function allocateSlug(insert, { generator = randomSlug, lengths = [4, 5, 6], attemptsPerLength = 8 } = {}) {
+  for (const length of lengths) {
+    for (let attempt = 0; attempt < attemptsPerLength; attempt += 1) {
+      let slug;
+      try { slug = normalizeCustomSlug(generator(length)); }
+      catch { continue; }
+      if (await insert(slug)) return slug;
+    }
+  }
+  throw new Error('SLUG_EXHAUSTED');
 }
 
 export function clientAddress(request) {
   return request.headers.get('CF-Connecting-IP') || 'unknown';
+}
+
+export async function pseudonymousClientKey(request, secret) {
+  if (!secret) throw new Error('RATE_LIMIT_NOT_CONFIGURED');
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(clientAddress(request)));
+  return [...new Uint8Array(signature)].map(value => value.toString(16).padStart(2, '0')).join('');
 }
 
 export function json(data, status = 200, headers = {}) {

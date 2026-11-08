@@ -1,4 +1,4 @@
-import { clientAddress, json, normalizeSlug, randomSlug, safeReferrer, userAgentFamily, validateTarget } from './core.js';
+import { allocateSlug, clientAddress, json, normalizeCustomSlug, normalizeSlug, pseudonymousClientKey, safeReferrer, userAgentFamily, validateTarget } from './core.js';
 import { CSRF_COOKIE, LOGIN_CSRF_COOKIE, SESSION_COOKIE, clearLoginFailures, expiredCookie, getSession, isAuthRequired, isSafeReturnPath, issueLoginCsrf, parseCookies, randomToken, rateLimitLogin, readCredentials, requireCsrf, secureCookie, sha256, verifyLoginCsrf, verifyPassword } from './auth.js';
 import qrcode from 'qrcode-generator';
 
@@ -10,7 +10,7 @@ const SECURITY = {
   'content-security-policy': "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 };
 
-function error(code, status = 400) { return json({ ok: false, error: code }, status); }
+function error(code, status = 400, headers = {}) { return json({ ok: false, error: code }, status, headers); }
 
 export async function verifyTurnstile(request, env, token, fetcher = fetch) {
   if (env.TURNSTILE_REQUIRED !== 'true') return true;
@@ -101,19 +101,47 @@ async function createLink(request, env) {
   if (!(await verifyTurnstile(request, env, body.turnstileToken))) return error('TURNSTILE_FAILED', 403);
   let target;
   try { target = validateTarget(body.url); } catch (e) { return error(e.message); }
+  const insert = async slug => {
+    try {
+      const result = await env.DB.prepare(`INSERT INTO links (slug,target_url)
+        SELECT ?,? WHERE NOT EXISTS (SELECT 1 FROM slug_tombstones WHERE slug=? COLLATE BINARY)`)
+        .bind(slug, target, slug).run();
+      return Number(result?.meta?.changes ?? 1) === 1;
+    } catch (e) {
+      if (String(e).includes('UNIQUE')) return false;
+      throw e;
+    }
+  };
   let slug;
-  try { slug = body.slug ? normalizeSlug(body.slug) : randomSlug(); } catch (e) { return error(e.message); }
-  try {
-    await env.DB.prepare('INSERT INTO links (slug,target_url) VALUES (?,?)').bind(slug, target).run();
-  } catch (e) {
-    if (String(e).includes('UNIQUE')) return error('SLUG_TAKEN', 409);
-    throw e;
+  if (body.slug) {
+    try { slug = normalizeCustomSlug(body.slug); } catch (e) { return error(e.message); }
+    if (!(await insert(slug))) return error('SLUG_TAKEN', 409);
+  } else {
+    try { slug = await allocateSlug(insert); }
+    catch (e) { return e.message === 'SLUG_EXHAUSTED' ? error('SLUG_CAPACITY_RETRY', 503) : error(e.message); }
   }
   const base = String(env.APP_BASE_URL || new URL(request.url).origin).replace(/\/$/, '');
   return json({ ok: true, slug, shortUrl: `${base}/${slug}` }, 201);
 }
 
+export async function enforceRedirectRateLimit(request, env) {
+  if (env.REDIRECT_RATE_LIMIT_REQUIRED !== 'true') return { allowed: true };
+  if (!env.REDIRECT_RATE_LIMITER?.limit || !env.REDIRECT_RATE_LIMIT_SECRET) return { allowed: false, unavailable: true };
+  try {
+    const key = await pseudonymousClientKey(request, env.REDIRECT_RATE_LIMIT_SECRET);
+    const result = await env.REDIRECT_RATE_LIMITER.limit({ key });
+    return { allowed: Boolean(result?.success) };
+  } catch {
+    return { allowed: false, unavailable: true };
+  }
+}
+
 async function redirect(request, env, slug) {
+  const limit = await enforceRedirectRateLimit(request, env);
+  if (!limit.allowed) {
+    if (limit.unavailable) return error('SERVICE_UNAVAILABLE', 503);
+    return error('RATE_LIMITED', 429, { 'retry-after': '60' });
+  }
   let clean;
   try { clean = normalizeSlug(slug); } catch { return error('NOT_FOUND', 404); }
   const row = await env.DB.prepare("SELECT id,target_url,disabled,expires_at FROM links WHERE slug=?").bind(clean).first();

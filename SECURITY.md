@@ -15,6 +15,8 @@ Report suspected vulnerabilities privately to the project owner or repository se
 - Enable `TURNSTILE_REQUIRED=true` outside local development and verify tokens on the server.
 - Keep D1 bindings, Turnstile widgets, hostnames, and secrets environment-specific.
 - Preserve `run_worker_first=true` so application security executes before protected assets.
+- Configure `REDIRECT_RATE_LIMITER`, provision a distinct `REDIRECT_RATE_LIMIT_SECRET`, and set `REDIRECT_RATE_LIMIT_REQUIRED=true` for public deployments.
+- Treat compact short codes as public identifiers. Rate limiting reduces scanning but does not authorize access to sensitive targets.
 - Never log passwords, verifier records, Turnstile tokens, session tokens, complete cookies, or authorization headers.
 - Rotate any credential suspected of exposure before publishing history.
 

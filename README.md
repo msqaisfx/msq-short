@@ -10,6 +10,9 @@ MSQ Short is an open-source, bilingual URL shortener by MSQAISFX. It runs on Clo
 
 - Arabic and English UI with RTL/LTR switching.
 - Short-link generation, copy action, SVG QR codes, redirects, and privacy-minimized statistics.
+- Compact, case-sensitive Base62 codes: four characters by default and optional custom codes from three characters.
+- Bounded collision retries (4 → 5 → 6), deletion tombstones, and legacy-code compatibility.
+- Approximate edge-local redirect rate limiting before D1 lookup to reduce enumeration and database abuse.
 - D1-backed link administration and analytics.
 - Server-side Turnstile verification.
 - Optional staging-only authentication gate covering pages, APIs, redirects, and non-public assets.
@@ -48,6 +51,8 @@ Copy `.env.example` only as a reference. For local secrets, use an ignored `.dev
 | `STAGING_AUTH_REQUIRED` | No | Enables the staging-only gate |
 | `STAGING_AUTH_CREDENTIALS` | Yes | JSON PBKDF2 verifier records; no plaintext passwords |
 | `LOGIN_RATE_LIMIT_SECRET` | Yes | Pseudonymizes login client addresses |
+| `REDIRECT_RATE_LIMIT_REQUIRED` | No | Fails closed unless redirect rate limiting is available |
+| `REDIRECT_RATE_LIMIT_SECRET` | Yes | HMAC-pseudonymizes redirect clients; use a distinct random secret |
 
 The credential JSON is a limited array of records containing `username`, `role`, `salt`, `iterations`, and `hash`. Generate records offline using an approved password-management process. Never reuse production passwords.
 
@@ -57,7 +62,11 @@ Create your own D1 database, update a private deployment configuration with its 
 
 ## Security
 
-The Worker validates HTTP(S) targets, rejects credential-bearing and local-loopback URLs, verifies Turnstile on the server, applies security headers, and minimizes analytics data. Staging authentication is independent of the final public product. See [SECURITY.md](SECURITY.md) for reporting and supported-version information.
+The Worker validates HTTP(S) targets, rejects credential-bearing and local-loopback URLs, verifies Turnstile on the server, applies security headers, and minimizes analytics data. Compact codes are public identifiers, not secrets. The redirect limiter is approximate and local to each Cloudflare location; it protects D1 before lookup but is not a globally strict quota. Staging authentication is independent of the final public product. See [SECURITY.md](SECURITY.md) for reporting and supported-version information.
+
+## Upgrading to v1.1.0
+
+Version 1.1.0 changes slug collation to case-sensitive Base62 and adds tombstones and redirect rate limiting. Do not deploy code before applying the reviewed migration and configuring the new binding/secret. Follow [the v1.1.0 upgrade guide](docs/UPGRADING-v1.1.0.md); existing links are copied without modification.
 
 ## Tests
 
