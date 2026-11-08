@@ -1,6 +1,7 @@
 import { allocateSlug, clientAddress, json, normalizeCustomSlug, normalizeSlug, pseudonymousClientKey, safeReferrer, userAgentFamily, validateTarget } from './core.js';
 import { CSRF_COOKIE, LOGIN_CSRF_COOKIE, SESSION_COOKIE, clearLoginFailures, credentialSecret, expiredCookie, getSession, isAuthRequired, isProductionAdminAuthRequired, isSafeReturnPath, issueLoginCsrf, loginRateLimitSecret, parseCookies, productionAdminAuthConfigured, randomToken, rateLimitLogin, readCredentials, requireCsrf, secureCookie, sha256, verifyLoginCsrf, verifyPassword } from './auth.js';
 import qrcode from 'qrcode-generator';
+import { createQrPng } from './qr.js';
 
 const SECURITY = {
   'x-content-type-options': 'nosniff',
@@ -206,6 +207,9 @@ export async function handle(request, env, ctx) {
     const value = url.searchParams.get('value') || '';
     if (!value || value.length > 2048) return error('INVALID_VALUE');
     const qr = qrcode(0, 'M'); qr.addData(value); qr.make();
+    if (url.searchParams.get('format') === 'png') {
+      return new Response(await createQrPng(qr), { headers: { 'content-type': 'image/png', 'content-disposition': 'attachment; filename="MSQ-Short-QR.png"', 'cache-control': 'public, max-age=86400' } });
+    }
     return new Response(qr.createSvgTag({ cellSize: 5, margin: 3, scalable: true }), { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
   }
   if (url.pathname.startsWith('/admin/api/')) return adminApi(request, env, url.pathname, session);

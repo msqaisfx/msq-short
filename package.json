@@ -1,13 +1,13 @@
 {
   "name": "msq-short",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "description": "Open-source bilingual URL shortener for Cloudflare Workers and D1",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/worker.js && node --check src/auth.js && node --test",
+    "check": "node --check src/worker.js && node --check src/auth.js && node --check src/qr.js && node --test",
     "test:integration": "sh test/integration.sh",
     "test:security": "sh test/security-integration.sh",
     "test:production-security": "sh test/production-security-integration.sh",

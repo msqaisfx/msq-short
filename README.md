@@ -9,7 +9,7 @@ MSQ Short is an open-source, bilingual URL shortener by MSQAISFX. It runs on Clo
 ## Features
 
 - Arabic and English UI with RTL/LTR switching.
-- Short-link generation, copy action, SVG QR codes, redirects, and privacy-minimized statistics.
+- Short-link generation, copy action, 1024×1024 PNG and SVG QR downloads, redirects, and privacy-minimized statistics.
 - Compact, case-sensitive Base62 codes: four characters by default and optional custom codes from three characters.
 - Bounded collision retries (4 → 5 → 6), deletion tombstones, and legacy-code compatibility.
 - Approximate edge-local redirect rate limiting before D1 lookup to reduce enumeration and database abuse.
