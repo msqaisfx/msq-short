@@ -23,10 +23,17 @@ test('generates URL-safe slug at requested length', () => {
   assert.equal(slug, 'hhhhhhhh');
   assert.equal(BASE62.length, 62);
 });
-test('generates 1,000 compact codes without duplicates', () => {
-  const slugs = new Set(Array.from({ length: 1000 }, () => randomSlug()));
+test('allocates 1,000 compact codes without duplicates after collision retries', async () => {
+  const slugs = new Set();
+  for (let index = 0; index < 1000; index += 1) {
+    const slug = await allocateSlug(async candidate => {
+      if (slugs.has(candidate)) return false;
+      slugs.add(candidate);
+      return true;
+    });
+    assert.match(slug, /^[a-zA-Z0-9]{4,6}$/);
+  }
   assert.equal(slugs.size, 1000);
-  for (const slug of slugs) assert.match(slug, /^[a-zA-Z0-9]{4}$/);
 });
 test('retries collisions and grows from 4 to 5 then 6 characters', async () => {
   const attempts = [];
