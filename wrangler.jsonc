@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "msq-short",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "d1_databases": [{ "binding": "DB", "database_name": "msq-short", "database_id": "REPLACE_AFTER_APPROVAL", "migrations_dir": "migrations" }],
+  "vars": {
+    "APP_BASE_URL": "http://localhost:8787",
+    "APP_ENV": "local",
+    "STAGING_AUTH_REQUIRED": "false",
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+    "TURNSTILE_REQUIRED": "false"
+  },
+  "env": {
+    "staging": {
+      "name": "msq-short-staging",
+      "workers_dev": true,
+      "preview_urls": false,
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "msq-short-staging-db",
+        "database_id": "REPLACE_WITH_YOUR_STAGING_D1_DATABASE_ID",
+        "migrations_dir": "migrations"
+      }],
+      "secrets": {
+        "required": [
+          "STAGING_AUTH_CREDENTIALS",
+          "LOGIN_RATE_LIMIT_SECRET",
+          "TURNSTILE_SECRET_KEY"
+        ]
+      },
+      "vars": {
+        "APP_BASE_URL": "https://REPLACE_WITH_YOUR_STAGING_HOSTNAME",
+        "APP_ENV": "staging",
+        "STAGING_AUTH_REQUIRED": "true",
+        "TURNSTILE_SITE_KEY": "REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY",
+        "TURNSTILE_REQUIRED": "true"
+      }
+    }
+  }
+}
